@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Watchtower EOC — SIMULATION ONLY</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2330;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #3b82f6;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --sim-red: #ff3b3b;
+  }
+
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ── SIMULATION BANNER ── */
+  .sim-banner {
+    background: var(--sim-red);
+    color: #fff;
+    text-align: center;
+    padding: 10px 16px;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: 0.18em;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 3px solid #c00;
+    text-shadow: 0 1px 2px rgba(0,0,0,.4);
+  }
+  .sim-banner span { font-size: 12px; font-weight: 500; letter-spacing: 0.06em; display: block; margin-top: 1px; }
+
+  /* ── LAYOUT ── */
+  .shell { max-width: 1100px; margin: 0 auto; padding: 24px 16px 60px; }
+
+  /* ── PAGE HEADER ── */
+  .page-header {
+    display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap;
+    gap: 12px; margin-bottom: 24px;
+    padding-bottom: 16px; border-bottom: 1px solid var(--border);
+  }
+  .page-header h1 { font-size: 22px; font-weight: 700; color: var(--text); }
+  .page-header h1 small { font-size: 13px; font-weight: 400; color: var(--muted); display: block; margin-top: 2px; }
+  .storm-badge {
+    background: var(--surface2); border: 1px solid var(--warn); border-radius: 8px;
+    padding: 8px 14px; text-align: right;
+  }
+  .storm-badge .label { font-size: 11px; color: var(--warn); text-transform: uppercase; letter-spacing: .08em; }
+  .storm-badge .name  { font-size: 18px; font-weight: 800; color: #fff; }
+  .storm-badge .meta  { font-size: 12px; color: var(--muted); }
+
+  /* ── GRID ── */
+  .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 720px) { .main-grid { grid-template-columns: 1fr; } }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px;
+  }
+  .card-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+    color: var(--muted); margin-bottom: 14px; display: flex; align-items: center; gap: 7px;
+  }
+  .card-title svg { flex-shrink: 0; }
+  .full-width { grid-column: 1 / -1; }
+
+  /* ── SITUATION BULLETS ── */
+  .sit-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .sit-list li {
+    display: flex; align-items: flex-start; gap: 8px;
+    background: var(--surface2); border-radius: 6px; padding: 9px 11px;
+    font-size: 13px;
+  }
+  .sit-list .dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px;
+  }
+  .dot-red    { background: var(--danger); }
+  .dot-yellow { background: var(--warn); }
+  .dot-blue   { background: var(--accent); }
+  .dot-green  { background: var(--success); }
+
+  /* ── CALL VOLUME CHART ── */
+  .chart-wrap { overflow-x: auto; }
+  .chart-svg-container { min-width: 480px; }
+  svg text { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; }
+
+  /* ── RISK TABLE ── */
+  .risk-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .risk-table th {
+    text-align: left; padding: 7px 10px; background: var(--surface2);
+    color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase;
+    letter-spacing: .07em; border-bottom: 1px solid var(--border);
+  }
+  .risk-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .risk-table tr:last-child td { border-bottom: none; }
+  .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700;
+    letter-spacing: .04em;
+  }
+  .pill-red    { background: rgba(239,68,68,.18); color: #fca5a5; }
+  .pill-yellow { background: rgba(245,158,11,.18); color: #fcd34d; }
+  .pill-green  { background: rgba(34,197,94,.18);  color: #86efac; }
+
+  /* ── RECOMMENDATION ── */
+  .rec-box {
+    background: var(--surface2); border: 1px solid var(--accent); border-radius: 8px;
+    padding: 16px; margin-bottom: 16px;
+  }
+  .rec-box h3 { font-size: 15px; font-weight: 700; margin-bottom: 6px; color: var(--accent); }
+  .rec-box p  { font-size: 13px; color: var(--text); margin-bottom: 4px; line-height: 1.6; }
+  .rec-rationale {
+    margin-top: 10px; padding: 10px; background: var(--surface); border-radius: 6px;
+    font-size: 12px; color: var(--muted); border-left: 3px solid var(--accent);
+  }
+  .rec-rationale strong { color: var(--text); }
+
+  /* ── DISPATCHER FORM ── */
+  .disp-form { display: flex; flex-direction: column; gap: 14px; }
+  .form-row   { display: flex; flex-direction: column; gap: 5px; }
+  label       { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+  select, textarea, input[type="text"] {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); padding: 9px 11px; font-size: 13px; width: 100%;
+    font-family: inherit; outline: none; transition: border-color .15s;
+  }
+  select:focus, textarea:focus, input[type="text"]:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 68px; }
+
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn {
+    padding: 9px 20px; border: none; border-radius: 6px; font-size: 13px;
+    font-weight: 700; cursor: pointer; letter-spacing: .04em; transition: opacity .15s, transform .1s;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-approve { background: var(--success); color: #052e0f; }
+  .btn-override { background: var(--warn); color: #1c0a00; }
+  .btn-approve:hover, .btn-override:hover { opacity: .88; }
+
+  .override-panel { display: none; flex-direction: column; gap: 12px; }
+  .override-panel.visible { display: flex; }
+
+  /* ── DECISION LOG ── */
+  .log-empty { color: var(--muted); font-size: 13px; font-style: italic; }
+  .log-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .log-entry {
+    background: var(--surface2); border-radius: 7px; padding: 11px 14px;
+    border-left: 4px solid var(--accent); font-size: 13px;
+  }
+  .log-entry.log-approved  { border-left-color: var(--success); }
+  .log-entry.log-overridden { border-left-color: var(--warn); }
+  .log-ts   { font-size: 11px; color: var(--muted); margin-bottom: 3px; font-variant-numeric: tabular-nums; }
+  .log-action { font-weight: 700; margin-bottom: 2px; }
+  .log-location { color: var(--accent); }
+  .log-reason { color: var(--muted); margin-top: 4px; font-size: 12px; }
+
+  /* ── FOOTER ── */
+  .page-footer {
+    text-align: center; margin-top: 48px; padding-top: 16px;
+    border-top: 1px solid var(--border); font-size: 11px; color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<div class="sim-banner">
+  ⚠ SIMULATION ONLY — EXERCISE USE ONLY — NOT AN ACTIVE EMERGENCY OPERATION ⚠
+  <span>No personnel have been dispatched. No real-world actions have been or will be taken. For training purposes only.</span>
+</div>
+
+<div class="shell">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h1>Watchtower Emergency Operations Center
+        <small>Simulated Incident Dashboard · Exercise ID: WTX-2025-07</small>
+      </h1>
+    </div>
+    <div class="storm-badge">
+      <div class="label">Simulated Storm</div>
+      <div class="name">CYCLONE ARGENT</div>
+      <div class="meta">Cat 2 Equivalent · Landfall T+00:00 · <span id="clock">--:--:--</span></div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+
+    <!-- Situation Overview -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Situation Overview
+      </div>
+      <ul class="sit-list">
+        <li><span class="dot dot-red"></span><span><strong>Wind:</strong> Simulated sustained 95 mph, gusts to 115 mph — downed lines reported on Routes 7 and 12 (fictional).</span></li>
+        <li><span class="dot dot-red"></span><span><strong>Flooding:</strong> Simulated 8–10 in. rainfall. Riverside District (fictional) under 2–4 ft inundation. Cedar Creek bridge closed.</span></li>
+        <li><span class="dot dot-yellow"></span><span><strong>Road Access:</strong> Northgate Corridor and Oak Ridge Rd passable. Southside Parkway flooded &amp; closed. Highway 5 south limited to emergency vehicles.</span></li>
+        <li><span class="dot dot-yellow"></span><span><strong>Utilities:</strong> 42 % of simulated service area without power. Generator fuel reserves at 60 %.</span></li>
+        <li><span class="dot dot-blue"></span><span><strong>Shelters:</strong> Eastwood High (fictional, cap 350) at 78 %. Northgate Community Center (cap 180) at 31 %.</span></li>
+        <li><span class="dot dot-green"></span><span><strong>Comms:</strong> Primary radio on backup generator. Cellular degraded in Riverside District.</span></li>
+      </ul>
+    </div>
+
+    <!-- Risk Assessment Table -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Simulated Risk Assessment
+      </div>
+      <table class="risk-table">
+        <thead>
+          <tr>
+            <th>Zone (Fictional)</th>
+            <th>Hazard</th>
+            <th>Access</th>
+            <th>Risk</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Riverside District</td>
+            <td>Flash flooding, downed lines</td>
+            <td>❌ Closed</td>
+            <td><span class="pill pill-red">CRITICAL</span></td>
+          </tr>
+          <tr>
+            <td>Southside Grid</td>
+            <td>Wind damage, debris</td>
+            <td>⚠ Limited</td>
+            <td><span class="pill pill-red">HIGH</span></td>
+          </tr>
+          <tr>
+            <td>Eastwood Suburb</td>
+            <td>Power outages, minor flooding</td>
+            <td>✓ Open</td>
+            <td><span class="pill pill-yellow">MODERATE</span></td>
+          </tr>
+          <tr>
+            <td>Northgate Corridor</td>
+            <td>Wind debris only</td>
+            <td>✓ Open</td>
+            <td><span class="pill pill-yellow">MODERATE</span></td>
+          </tr>
+          <tr>
+            <td>Highland Ridge</td>
+            <td>No flooding risk</td>
+            <td>✓ Open</td>
+            <td><span class="pill pill-green">LOW</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Call Volume Chart -->
+    <div class="card full-width">
+      <div class="card-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Simulated Emergency Call Volume — 12-Hour Window (Calls per Hour)
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-svg-container">
+          <svg id="callChart" viewBox="0 0 760 240" width="100%" height="240" aria-label="Simulated emergency call volume chart over 12 hours"></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recommendation -->
+    <div class="card">
+      <div class="card-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        System Recommendation
+      </div>
+
+      <div class="rec-box">
+        <h3>Primary Staging: Northgate Community Center Parking Area</h3>
+        <p><strong>Crews:</strong> 3× EMS units, 2× Heavy Rescue, 1× Technical Rescue (water), 1× Incident Command vehicle</p>
+        <p><strong>Secondary Staging:</strong> Highland Ridge Fire Station (Fictional FS-7) — overflow and air operations support</p>
+        <div class="rec-rationale">
+          <strong>Rationale:</strong> Northgate Corridor remains passable in both directions, providing rapid access to the Eastwood and Northgate moderate-risk zones. Riverside District and Southside are inaccessible by standard apparatus; the water rescue unit staged at Northgate can deploy via Oak Ridge Rd — the last confirmed open route toward Riverside. Highland Ridge FS-7 is elevated above flood stage and allows aerial asset coordination. Southside Parkway closure and Highway 5 restrictions eliminate the former Main Street staging area as viable. Call volume trend (peak at H+07) indicates sustained demand through the next 4 hours; pre-positioning now minimises response time during the projected second surge.
+        </div>
+      </div>
+
+      <!-- Dispatcher Decision -->
+      <div class="disp-form">
+        <div class="card-title" style="margin-bottom:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12l2 2 4-4"/></svg>
+          Dispatcher Decision
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-approve" id="btnApprove">✓ Approve Recommendation</button>
+          <button class="btn btn-override" id="btnOverride">↺ Override — Choose Alternate</button>
+        </div>
+
+        <div class="override-panel" id="overridePanel">
+          <div class="form-row">
+            <label for="altLocation">Alternate Staging Location</label>
+            <select id="altLocation">
+              <option value="">— Select location —</option>
+              <option value="Highland Ridge FS-7 (Fictional)">Highland Ridge FS-7 (Fictional)</option>
+              <option value="Eastwood High School Rear Lot (Fictional)">Eastwood High School Rear Lot (Fictional)</option>
+              <option value="Civic Center Garage Level 2 (Fictional)">Civic Center Garage Level 2 (Fictional)</option>
+              <option value="County Fairgrounds West Lot (Fictional)">County Fairgrounds West Lot (Fictional)</option>
+              <option value="Northgate Park &amp; Ride (Fictional)">Northgate Park &amp; Ride (Fictional)</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label for="overrideReason">Override Reason</label>
+            <textarea id="overrideReason" placeholder="Describe operational reason for override (e.g. capacity, access, unit availability)…"></textarea>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-override" id="btnConfirmOverride">Confirm Override</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Decision Log -->
+    <div class="card" id="logCard">
+      <div class="card-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Decision Log
+      </div>
+      <div id="logContainer">
+        <p class="log-empty" id="logEmpty">No decisions recorded yet. Use the dispatcher controls to log a decision.</p>
+        <ul class="log-list" id="logList"></ul>
+      </div>
+    </div>
+
+  </div><!-- /main-grid -->
+</div><!-- /shell -->
+
+<div class="page-footer">
+  Watchtower EOC · Exercise WTX-2025-07 · <strong style="color:var(--sim-red);">SIMULATION ONLY — NOT A REAL EMERGENCY</strong><br>
+  <span style="margin-top:4px;display:inline-block;">Made with IBM Bob</span>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ── CLOCK ── */
+  function updateClock() {
+    document.getElementById("clock").textContent =
+      new Date().toLocaleTimeString("en-US", { hour12: false });
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  /* ── CALL VOLUME DATA ── */
+  // 12 hourly buckets labelled H+01 through H+12
+  // Simulates pre-storm calm, rapid surge at landfall, sustained peak, gradual decline
+  const hours  = ["H+01","H+02","H+03","H+04","H+05","H+06","H+07","H+08","H+09","H+10","H+11","H+12"];
+  const counts = [14, 22, 41, 68, 89, 112, 127, 118, 104, 87, 63, 44];
+
+  /* ── DRAW CHART ── */
+  (function drawChart() {
+    const svg    = document.getElementById("callChart");
+    const W      = 760, H = 240;
+    const padL   = 54, padR = 20, padT = 24, padB = 44;
+    const cW     = W - padL - padR;
+    const cH     = H - padT - padB;
+    const maxVal = 140;
+    const colW   = cW / counts.length;
+
+    function ns(tag, attrs) {
+      const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+      for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+      return el;
+    }
+
+    // Grid lines + Y labels
+    const yTicks = [0, 20, 40, 60, 80, 100, 120, 140];
+    for (const t of yTicks) {
+      const y = padT + cH - (t / maxVal) * cH;
+      const line = ns("line", { x1: padL, y1: y, x2: padL + cW, y2: y,
+        stroke: "#30363d", "stroke-width": "1", "stroke-dasharray": t === 0 ? "none" : "3 4" });
+      svg.appendChild(line);
+      const lbl = ns("text", { x: padL - 7, y: y + 4, "text-anchor": "end",
+        fill: "#8b949e", "font-size": "11" });
+      lbl.textContent = t;
+      svg.appendChild(lbl);
+    }
+
+    // Bars
+    counts.forEach((v, i) => {
+      const barH = (v / maxVal) * cH;
+      const x    = padL + i * colW + colW * 0.18;
+      const bw   = colW * 0.64;
+      const y    = padT + cH - barH;
+
+      // Colour: danger if above 100, warn if 60-100, accent otherwise
+      const fill = v > 100 ? "#ef4444" : v > 60 ? "#f59e0b" : "#3b82f6";
+      const opacity = "0.82";
+
+      const rect = ns("rect", { x, y, width: bw, height: barH, rx: "3",
+        fill, opacity });
+      svg.appendChild(rect);
+
+      // Value label above bar
+      const valLbl = ns("text", { x: x + bw / 2, y: y - 5, "text-anchor": "middle",
+        fill: "#e6edf3", "font-size": "11", "font-weight": "700" });
+      valLbl.textContent = v;
+      svg.appendChild(valLbl);
+
+      // Hour label below
+      const hourLbl = ns("text", { x: x + bw / 2, y: padT + cH + 16,
+        "text-anchor": "middle", fill: "#8b949e", "font-size": "11" });
+      hourLbl.textContent = hours[i];
+      svg.appendChild(hourLbl);
+    });
+
+    // Peak annotation
+    const peakIdx = counts.indexOf(Math.max(...counts)); // H+07 index = 6
+    const px = padL + peakIdx * colW + colW * 0.18 + (colW * 0.64) / 2;
+    const py = padT + cH - (counts[peakIdx] / maxVal) * cH - 20;
+    const ann = ns("text", { x: px + 2, y: py, fill: "#ef4444", "font-size": "11",
+      "font-weight": "700", "text-anchor": "middle" });
+    ann.textContent = "▲ PEAK";
+    svg.appendChild(ann);
+
+    // X-axis label
+    const xLbl = ns("text", { x: padL + cW / 2, y: H - 2, "text-anchor": "middle",
+      fill: "#8b949e", "font-size": "11" });
+    xLbl.textContent = "Hour relative to simulated landfall (H+00)  —  SIMULATED CALL COUNTS";
+    svg.appendChild(xLbl);
+
+    // Y-axis label (rotated)
+    const g = ns("g", { transform: `rotate(-90, ${padL - 36}, ${padT + cH / 2})` });
+    const yLbl = ns("text", { x: padL - 36, y: padT + cH / 2, "text-anchor": "middle",
+      fill: "#8b949e", "font-size": "11" });
+    yLbl.textContent = "Calls / hr";
+    g.appendChild(yLbl);
+    svg.appendChild(g);
+  })();
+
+  /* ── DISPATCHER LOGIC ── */
+  const btnApprove        = document.getElementById("btnApprove");
+  const btnOverride       = document.getElementById("btnOverride");
+  const btnConfirmOverride= document.getElementById("btnConfirmOverride");
+  const overridePanel     = document.getElementById("overridePanel");
+  const altLocationSel    = document.getElementById("altLocation");
+  const overrideReasonTA  = document.getElementById("overrideReason");
+  const logEmpty          = document.getElementById("logEmpty");
+  const logList           = document.getElementById("logList");
+
+  btnOverride.addEventListener("click", function () {
+    overridePanel.classList.toggle("visible");
+    this.textContent = overridePanel.classList.contains("visible")
+      ? "✕ Cancel Override"
+      : "↺ Override — Choose Alternate";
+  });
+
+  btnApprove.addEventListener("click", function () {
+    appendLog({
+      type:     "APPROVED",
+      action:   "Recommendation Approved",
+      location: "Northgate Community Center Parking Area (Fictional)",
+      reason:   "Dispatcher approved system recommendation as issued."
+    });
+    overridePanel.classList.remove("visible");
+    btnOverride.textContent = "↺ Override — Choose Alternate";
+  });
+
+  btnConfirmOverride.addEventListener("click", function () {
+    const loc    = altLocationSel.value.trim();
+    const reason = overrideReasonTA.value.trim();
+
+    if (!loc) {
+      altLocationSel.style.borderColor = "#ef4444";
+      altLocationSel.focus();
+      return;
+    }
+    altLocationSel.style.borderColor = "";
+
+    if (!reason) {
+      overrideReasonTA.style.borderColor = "#ef4444";
+      overrideReasonTA.focus();
+      return;
+    }
+    overrideReasonTA.style.borderColor = "";
+
+    appendLog({
+      type:     "OVERRIDDEN",
+      action:   "Recommendation Overridden",
+      location: loc,
+      reason:   reason
+    });
+
+    // Reset override form
+    altLocationSel.value = "";
+    overrideReasonTA.value = "";
+    overridePanel.classList.remove("visible");
+    btnOverride.textContent = "↺ Override — Choose Alternate";
+  });
+
+  function appendLog(entry) {
+    logEmpty.style.display = "none";
+
+    const now = new Date();
+    const ts  = now.toLocaleString("en-US", {
+      month: "short", day: "numeric", year: "numeric",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
+    }) + " (SIM LOCAL)";
+
+    const li = document.createElement("li");
+    li.className = "log-entry " +
+      (entry.type === "APPROVED" ? "log-approved" : "log-overridden");
+
+    li.innerHTML =
+      `<div class="log-ts">🕐 ${escHtml(ts)}</div>` +
+      `<div class="log-action">${escHtml(entry.action)}</div>` +
+      `<div>Staging Location: <span class="log-location">${escHtml(entry.location)}</span></div>` +
+      `<div class="log-reason">Reason: ${escHtml(entry.reason)}</div>`;
+
+    logList.prepend(li);
+
+    // Scroll log into view on mobile
+    document.getElementById("logCard").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+            .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  }
+
+})();
+</script>
+</body>
+</html>
